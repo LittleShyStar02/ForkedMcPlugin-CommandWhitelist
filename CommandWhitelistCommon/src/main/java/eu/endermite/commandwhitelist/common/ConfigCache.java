@@ -7,6 +7,7 @@ import net.kyori.adventure.key.Key;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
+import java.util.regex.PatternSyntaxException;
 
 public class ConfigCache {
 
@@ -22,6 +23,9 @@ public class ConfigCache {
     public float command_denied_sound_volume = 1.0f;
     public float command_denied_sound_pitch = 1.0f;
     public MessageType messageType = MessageType.CHAT;
+    public ListMode commandsMode = ListMode.WHITELIST;
+    public ListMode subcommandsMode = ListMode.BLACKLIST;
+    public MatchType matchType = MatchType.LITERAL;
     public boolean debug = false;
     private final String default_command_denied_sound_key = "entity.villager.no";
 
@@ -63,6 +67,10 @@ public class ConfigCache {
 
         config.addComment("messages", "Messages use MiniMessage formatting (https://docs.adventure.kyori.net/minimessage/format)");
 
+        config.addDefault("mode.commands", ListMode.WHITELIST.toString(), "How the \"commands\" lists of the groups are interpreted.\nWHITELIST - players can only see/use the listed commands\nBLACKLIST - players can see/use every command except the listed ones");
+        config.addDefault("mode.subcommands", ListMode.BLACKLIST.toString(), "How the \"subcommands\" lists of the groups are interpreted.\nBLACKLIST - players cannot see/use the listed subcommands\nWHITELIST - a command with listed subcommands can only be used with one of them\n(commands that have no listed subcommands are not restricted)");
+        config.addDefault("mode.matchtype", MatchType.LITERAL.toString(), "How every entry of the \"commands\" and \"subcommands\" lists is compared with what the player typed.\nLITERAL (or NORMAL) - the entry is the exact command, for example \"tpa\" or \"help about\"\nREGEX - the entry is a case-insensitive regular expression, for example 'ciao\\w' matches ciao1, ciaoX...\nIn REGEX a command entry must match the whole command, a subcommand entry must match the beginning of the command line\n(words separated by one space, no slash), for example 'gamemode (creative|spectator)'.\nWith the WHITELIST mode for subcommands, the part of the entry before its first space says to which commands it applies.\nWrite regular expressions between single quotes in the groups, so that backslashes are kept as they are.");
+
         if (canDoProtocolLib)
             config.addDefault("use_protocollib", false, "Do not enable if you don't have issues with aliased commands.\nThis requires server restart to take effect.");
 
@@ -81,8 +89,8 @@ public class ConfigCache {
             exampleSubCommands.add("example of");
             String exampleCustomCommandDeniedMessage = "You don't have commandwhitelist.group.example permission.";
 
-            config.addExample("groups.example.commands", exampleCommands, "This is the WHITELIST of commands that players will be able to see/use in the group \"example\"");
-            config.addExample("groups.example.subcommands", exampleSubCommands, "This is the BLACKLIST of subcommands that players will NOT be able to see/use in the group \"example\"");
+            config.addExample("groups.example.commands", exampleCommands, "These are the commands of the group \"example\". Depending on mode.commands, players will only be able to see/use them (WHITELIST) or will NOT be able to see/use them (BLACKLIST)");
+            config.addExample("groups.example.subcommands", exampleSubCommands, "These are the subcommands of the group \"example\". Depending on mode.subcommands, players will NOT be able to see/use them (BLACKLIST) or will only be able to use these subcommands of their command (WHITELIST)");
             config.addExample("groups.example.custom_command_denied_message", exampleCustomCommandDeniedMessage, "This is a custom message that players will see if they do not have commandwhitelist.group.<group_name> permission.\ncommandwhitelist.group.example in this case\nIf you don't want to use a custom message, set custom_command_denid_message: \"\"");
             config.addComment("groups.example", "All groups except from default require commandwhitelist.group.<group_name> permission\ncommandwhitelist.group.example in this case\n If you wish to leave the list empty, put \"commands: []\" or \"subcommands: []\"");
         }
@@ -146,6 +154,9 @@ public class ConfigCache {
             }
         }
         debug = config.getBoolean("debug", false);
+        commandsMode = loadListMode("mode.commands", ListMode.WHITELIST);
+        subcommandsMode = loadListMode("mode.subcommands", ListMode.BLACKLIST);
+        matchType = loadMatchType();
         try {
             String chatTypeId = config.getString("message_type");
             if (chatTypeId == null) {
@@ -168,6 +179,36 @@ public class ConfigCache {
         }
 
         return saveConfig();
+    }
+
+    private ListMode loadListMode(String path, ListMode fallback) {
+        String value = config.getString(path);
+        if (value == null) {
+            warn("Invalid " + path + ". Using " + fallback + ".");
+            return fallback;
+        }
+        try {
+            return ListMode.valueOf(value.trim().toUpperCase(Locale.ENGLISH));
+        } catch (IllegalArgumentException e) {
+            warn("Invalid " + path + " \"" + value + "\", valid modes are WHITELIST and BLACKLIST. Using " + fallback + ".");
+            return fallback;
+        }
+    }
+
+    private MatchType loadMatchType() {
+        String value = config.getString("mode.matchtype");
+        if (value == null) {
+            warn("Invalid mode.matchtype. Using " + MatchType.LITERAL + ".");
+            return MatchType.LITERAL;
+        }
+        value = value.trim().toUpperCase(Locale.ENGLISH);
+        if (value.equals("NORMAL")) return MatchType.LITERAL;
+        try {
+            return MatchType.valueOf(value);
+        } catch (IllegalArgumentException e) {
+            warn("Invalid mode.matchtype \"" + value + "\", valid match types are LITERAL (or NORMAL) and REGEX. Using " + MatchType.LITERAL + ".");
+            return MatchType.LITERAL;
+        }
     }
 
     private boolean saveConfig() {
@@ -194,6 +235,16 @@ public class ConfigCache {
     public CWGroup loadCWGroup(String id, ConfigSection section) {
         HashSet<String> commands = new HashSet<>();
         for (String cmd : section.getStringList(id + ".commands")) {
+            if (matchType == MatchType.REGEX) {
+                try {
+                    CommandUtil.validateCommandRegex(cmd);
+                } catch (PatternSyntaxException e) {
+                    warn("CommandWhitelist - \"" + cmd + "\" is not a valid regular expression (" + e.getDescription() + "). Skipping it.");
+                    continue;
+                }
+                commands.add(cmd);
+                continue;
+            }
             if (cmd.contains(" ")) {
                 String[] cmdSplit = cmd.split(" ");
                 warn("CommandWhitelist - \"" + cmd + "\" is not a command. Loading it as \"" + cmdSplit[0] + "\".");
@@ -204,6 +255,19 @@ public class ConfigCache {
         }
         List<String> subCommands = new ArrayList<>();
         for (String subCmd : section.getStringList(id + ".subcommands")) {
+            if (matchType == MatchType.REGEX) {
+                try {
+                    CommandUtil.validateSubcommandRegex(subCmd);
+                } catch (PatternSyntaxException e) {
+                    warn("CommandWhitelist - \"" + subCmd + "\" is not a valid regular expression (" + e.getDescription() + "). Skipping it.");
+                    continue;
+                } catch (IllegalArgumentException e) {
+                    warn("CommandWhitelist - \"" + subCmd + "\" is not a subcommand (" + e.getMessage() + "). Skipping it.");
+                    continue;
+                }
+                subCommands.add(subCmd);
+                continue;
+            }
             if (!subCmd.contains(" ")) {
                 warn("CommandWhitelist - \"" + subCmd + "\" is not a subcommand. Skipping it.");
                 continue;

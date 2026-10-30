@@ -42,18 +42,15 @@ public class PacketCommandPreProcessListener {
 
                 HashSet<String> commands = CommandWhitelistBukkit.getCommands(player);
                 BukkitAudiences audiences = CommandWhitelistBukkit.getAudiences();
-                if (!commands.contains(label)) {
+                if (!CommandUtil.isCommandAllowed(config.commandsMode, config.matchType, commands, label)) {
                     event.setCancelled(true);
                     audiences.player(player).sendMessage(CWCommand.miniMessage.deserialize(config.prefix + CommandWhitelistBukkit.getCommandDeniedMessage(label)));
                     return;
                 }
-                HashSet<String> bannedSubCommands = CommandWhitelistBukkit.getSuggestions(player);
-                for (String bannedSubCommand : bannedSubCommands) {
-                    if (string.toLowerCase().substring(1).startsWith(bannedSubCommand)) {
-                        event.setCancelled(true);
-                        CommandWhitelistBukkit.getAudiences().player(player).sendMessage(CWCommand.miniMessage.deserialize(config.prefix + config.subcommand_denied));
-                        return;
-                    }
+                HashSet<String> listedSubCommands = CommandWhitelistBukkit.getSuggestions(player);
+                if (!CommandUtil.isSubcommandAllowed(config.subcommandsMode, config.matchType, listedSubCommands, string)) {
+                    event.setCancelled(true);
+                    CommandWhitelistBukkit.getAudiences().player(player).sendMessage(CWCommand.miniMessage.deserialize(config.prefix + config.subcommand_denied));
                 }
             }
         });

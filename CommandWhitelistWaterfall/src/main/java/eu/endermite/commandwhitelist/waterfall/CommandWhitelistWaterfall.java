@@ -1,6 +1,7 @@
 package eu.endermite.commandwhitelist.waterfall;
 
 import eu.endermite.commandwhitelist.common.CWGroup;
+import eu.endermite.commandwhitelist.common.CommandUtil;
 import eu.endermite.commandwhitelist.common.ConfigCache;
 import eu.endermite.commandwhitelist.common.commands.CWCommand;
 import eu.endermite.commandwhitelist.waterfall.command.BungeeMainCommand;
@@ -76,7 +77,7 @@ public final class CommandWhitelistWaterfall extends Plugin {
 
     /**
      * @param player Bungee Player
-     * @return commands available to the player
+     * @return commands listed in the groups available to the player, interpreted according to mode.commands
      */
     public static HashSet<String> getCommands(ProxiedPlayer player) {
         HashSet<String> commandList = new HashSet<>();
@@ -92,7 +93,7 @@ public final class CommandWhitelistWaterfall extends Plugin {
 
     /**
      * @param player Bungee Player
-     * @return subcommands unavailable for the player
+     * @return subcommands listed in the groups available to the player, interpreted according to mode.subcommands
      */
     public static HashSet<String> getSuggestions(ProxiedPlayer player) {
         HashMap<String, CWGroup> groups = configCache.getGroupList();
@@ -113,7 +114,7 @@ public final class CommandWhitelistWaterfall extends Plugin {
         String commandDeniedMessage = configCache.command_denied;
         HashMap<String, CWGroup> groups = configCache.getGroupList();
         for (CWGroup group : groups.values()) {
-            if (group.getCommands().contains(command)) {
+            if (CommandUtil.isCommandListed(configCache.matchType, group.getCommands(), command)) {
                 if (group.getCommandDeniedMessage() == null || group.getCommandDeniedMessage().isEmpty()) continue;
                 commandDeniedMessage = group.getCommandDeniedMessage();
                 break; // get first message we find

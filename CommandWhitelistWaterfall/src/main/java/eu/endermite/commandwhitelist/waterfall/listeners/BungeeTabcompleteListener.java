@@ -22,7 +22,11 @@ public class BungeeTabcompleteListener implements Listener {
         if (commandEnd >= 0 && cursor.charAt(0) == '/') {
             String command = cursor.substring(1, commandEnd).toLowerCase();
             if (CommandWhitelistWaterfall.getPlugin().getProxy().getPluginManager().isExecutableCommand(command, player)
-                    && !CommandWhitelistWaterfall.getCommands(player).contains(command)) {
+                    && !CommandUtil.isCommandAllowed(
+                            CommandWhitelistWaterfall.getConfigCache().commandsMode,
+                            CommandWhitelistWaterfall.getConfigCache().matchType,
+                            CommandWhitelistWaterfall.getCommands(player),
+                            command)) {
                 event.setCancelled(true);
                 return;
             }
@@ -32,7 +36,9 @@ public class BungeeTabcompleteListener implements Listener {
         List<String> suggestions = CommandUtil.filterSuggestions(
                 event.getCursor(),
                 event.getSuggestions(),
-                CommandWhitelistWaterfall.getSuggestions(player)
+                CommandWhitelistWaterfall.getSuggestions(player),
+                CommandWhitelistWaterfall.getConfigCache().subcommandsMode,
+                CommandWhitelistWaterfall.getConfigCache().matchType
         );
         event.getSuggestions().clear();
         event.getSuggestions().addAll(suggestions);

@@ -7,6 +7,7 @@ import eu.endermite.commandwhitelist.bukkit.listeners.PlayerCommandSendListener;
 import eu.endermite.commandwhitelist.bukkit.listeners.TabCompleteBlockerListener;
 import eu.endermite.commandwhitelist.bukkit.listeners.protocollib.PacketCommandPreProcessListener;
 import eu.endermite.commandwhitelist.common.CWGroup;
+import eu.endermite.commandwhitelist.common.CommandUtil;
 import eu.endermite.commandwhitelist.common.ConfigCache;
 import eu.endermite.commandwhitelist.common.commands.CWCommand;
 import net.kyori.adventure.platform.bukkit.BukkitAudiences;
@@ -108,7 +109,7 @@ public class CommandWhitelistBukkit extends JavaPlugin {
 
     /**
      * @param player Bukkit Player
-     * @return commands available to the player
+     * @return commands listed in the groups available to the player, interpreted according to mode.commands
      */
     public static HashSet<String> getCommands(org.bukkit.entity.Player player) {
         HashSet<String> commandList = new HashSet<>();
@@ -124,7 +125,7 @@ public class CommandWhitelistBukkit extends JavaPlugin {
 
     /**
      * @param player Bukkit Player
-     * @return subcommands unavailable for the player
+     * @return subcommands listed in the groups available to the player, interpreted according to mode.subcommands
      */
     public static HashSet<String> getSuggestions(Player player) {
         HashSet<String> suggestionList = new HashSet<>();
@@ -145,7 +146,7 @@ public class CommandWhitelistBukkit extends JavaPlugin {
         String commandDeniedMessage = configCache.command_denied;
         HashMap<String, CWGroup> groups = configCache.getGroupList();
         for (CWGroup group : groups.values()) {
-            if (group.getCommands().contains(command)) {
+            if (CommandUtil.isCommandListed(configCache.matchType, group.getCommands(), command)) {
                 if (group.getCommandDeniedMessage() == null || group.getCommandDeniedMessage().isEmpty()) continue;
                 commandDeniedMessage = group.getCommandDeniedMessage();
                 break; // get first message we find

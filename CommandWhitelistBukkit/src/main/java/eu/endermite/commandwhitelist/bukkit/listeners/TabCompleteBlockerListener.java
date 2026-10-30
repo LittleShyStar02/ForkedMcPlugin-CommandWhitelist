@@ -17,8 +17,11 @@ public class TabCompleteBlockerListener implements Listener {
         if (player.hasPermission(CWPermission.BYPASS.permission())) return;
         String buffer = event.getBuffer();
         int commandEnd = buffer.indexOf(' ');
-        if (commandEnd < 0 || buffer.charAt(0) != '/' || !CommandWhitelistBukkit.getCommands(player)
-                .contains(buffer.substring(1, commandEnd).toLowerCase())) {
+        if (commandEnd < 0 || buffer.charAt(0) != '/' || !CommandUtil.isCommandAllowed(
+                CommandWhitelistBukkit.getConfigCache().commandsMode,
+                CommandWhitelistBukkit.getConfigCache().matchType,
+                CommandWhitelistBukkit.getCommands(player),
+                buffer.substring(1, commandEnd))) {
             CommandWhitelistBukkit.getConfigCache().debug("Actively prevented " + event.getSender().getName() + "'s tab completion (sus packet)");
             event.setCancelled(true);
             return;
@@ -30,7 +33,9 @@ public class TabCompleteBlockerListener implements Listener {
                 CommandUtil.filterSuggestions(
                         buffer,
                         event.getCompletions(),
-                        CommandWhitelistBukkit.getSuggestions(player)
+                        CommandWhitelistBukkit.getSuggestions(player),
+                        CommandWhitelistBukkit.getConfigCache().subcommandsMode,
+                        CommandWhitelistBukkit.getConfigCache().matchType
                 )
         );
     }

@@ -78,10 +78,10 @@ public class CommandWhitelistVelocity {
     public void onUserCommandSendEvent(PlayerAvailableCommandsEvent event) {
         Player player = event.getPlayer();
         if (player.hasPermission(CWPermission.BYPASS.permission())) return;
-        HashSet<String> allowedCommands = getCommands(player);
+        HashSet<String> listedCommands = getCommands(player);
         event.getRootNode().getChildren().removeIf((commandNode) ->
                 server.getCommandManager().hasCommand(commandNode.getName())
-                        && !allowedCommands.contains(commandNode.getName())
+                        && !CommandUtil.isCommandAllowed(configCache.commandsMode, configCache.matchType, listedCommands, commandNode.getName())
         );
     }
 
@@ -96,21 +96,19 @@ public class CommandWhitelistVelocity {
         String command = event.getCommand().trim();
         if (command.startsWith("/")) command = command.substring(1);
 
-        HashSet<String> allowedCommands = getCommands(player);
+        HashSet<String> listedCommands = getCommands(player);
         String label = CommandUtil.getCommandLabel(command);
-        if (server.getCommandManager().hasCommand(label) && !allowedCommands.contains(label)) {
+        if (server.getCommandManager().hasCommand(label)
+                && !CommandUtil.isCommandAllowed(configCache.commandsMode, configCache.matchType, listedCommands, label)) {
             event.setResult(CommandExecuteEvent.CommandResult.forwardToServer());
             return;
         }
 
-        HashSet<String> bannedSubCommands = getSuggestions(player);
+        HashSet<String> listedSubCommands = getSuggestions(player);
 
-        for (String bannedSubCommand : bannedSubCommands) {
-            if (command.startsWith(bannedSubCommand)) {
-                event.setResult(CommandExecuteEvent.CommandResult.denied());
-                player.sendMessage(CWCommand.miniMessage.deserialize(configCache.prefix + configCache.subcommand_denied));
-                return;
-            }
+        if (!CommandUtil.isSubcommandAllowed(configCache.subcommandsMode, configCache.matchType, listedSubCommands, command)) {
+            event.setResult(CommandExecuteEvent.CommandResult.denied());
+            player.sendMessage(CWCommand.miniMessage.deserialize(configCache.prefix + configCache.subcommand_denied));
         }
     }
 
@@ -128,7 +126,9 @@ public class CommandWhitelistVelocity {
         List<String> newSuggestions = CommandUtil.filterSuggestions(
                 buffer,
                 event.getSuggestions(),
-                getSuggestions(player)
+                getSuggestions(player),
+                configCache.subcommandsMode,
+                configCache.matchType
         );
 
         event.getSuggestions().clear();
@@ -141,7 +141,7 @@ public class CommandWhitelistVelocity {
 
     /**
      * @param player Velocity Player
-     * @return commands available to the player
+     * @return commands listed in the groups available to the player, interpreted according to mode.commands
      */
     public HashSet<String> getCommands(Player player) {
         HashMap<String, CWGroup> groups = configCache.getGroupList();
@@ -158,7 +158,7 @@ public class CommandWhitelistVelocity {
 
     /**
      * @param player Velocity Player
-     * @return subcommands unavailable for the player
+     * @return subcommands listed in the groups available to the player, interpreted according to mode.subcommands
      */
     public HashSet<String> getSuggestions(Player player) {
         HashSet<String> suggestionList = new HashSet<>();
