@@ -113,6 +113,8 @@ public final class CommandWhitelistWaterfall extends Plugin implements CWCommand
         Settings settings = configCache.get();
         CommandFilter.Verdict verdict = CommandFilter.evaluate(settings, player::hasPermission, event.getMessage(), aliases);
 
+        configCache.debug(player.getName() + " ran \"" + event.getMessage() + "\": " + verdict);
+
         if (verdict == CommandFilter.Verdict.ALLOWED) return;
 
         event.setCancelled(true);
@@ -144,8 +146,14 @@ public final class CommandWhitelistWaterfall extends Plugin implements CWCommand
 
         List<String> filtered = CommandFilter.filterTabCompletion(settings, player::hasPermission, cursor, event.getSuggestions(), aliases);
 
-        if (filtered == null) event.setCancelled(true);
-        else filter(event, filtered);
+        if (filtered == null) {
+            configCache.debug("Actively prevented " + player.getName() + "'s tab completion (sus packet)");
+            event.setCancelled(true);
+        } else {
+            configCache.debug("Tab completion of " + player.getName() + " for \"" + cursor + "\": "
+                    + filtered.size() + " of " + event.getSuggestions().size() + " suggestions kept");
+            filter(event, filtered);
+        }
     }
 
     private static void filter(TabCompleteEvent event, List<String> filtered) {

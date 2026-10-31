@@ -37,9 +37,13 @@ public class WaterfallDefineCommandsListener implements Listener {
         for (Map.Entry<String, Command> entry : event.getCommands().entrySet())
             names.computeIfAbsent(entry.getValue(), command -> new ArrayList<>()).add(entry.getKey());
 
+        int before = event.getCommands().size();
+
         event.getCommands().entrySet().removeIf(entry -> {
             Collection<String> sameCommand = names.get(entry.getValue());
             return !CommandFilter.isVisible(settings, player::hasPermission, entry.getKey(), label -> sameCommand);
         });
+
+        plugin.getConfigCache().debug("Command list of " + player.getName() + ": " + event.getCommands().size() + " of " + before + " commands kept");
     }
 }

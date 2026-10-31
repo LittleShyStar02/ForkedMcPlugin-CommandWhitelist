@@ -90,12 +90,16 @@ public class CommandWhitelistVelocity implements CWCommand.Platform {
 
         Settings settings = configCache.get();
 
+        int before = event.getRootNode().getChildren().size();
+
         event.getRootNode().getChildren().removeIf(commandNode ->
                 server.getCommandManager().hasCommand(commandNode.getName())
                         && !CommandFilter.isVisible(settings, player::hasPermission, commandNode.getName(), CommandFilter.AliasResolver.NONE));
 
         // the client suggests literal branches of a command by itself, so the subcommands have to leave the tree too
         Settings.Rules rules = settings.rulesFor(player::hasPermission);
+
+        configCache.debug("Command list of " + player.getUsername() + ": " + event.getRootNode().getChildren().size() + " of " + before + " commands kept");
 
         if (rules.subCommands.isEmpty()) return;
 
@@ -200,6 +204,12 @@ public class CommandWhitelistVelocity implements CWCommand.Platform {
         Settings settings = configCache.get();
         Settings.Rules rules = settings.rulesFor(player::hasPermission);
         String label = CommandUtil.getCommandLabel(command);
+
+        configCache.debug(player.getUsername() + " ran \"" + command + "\": command "
+                + CommandFilter.commandVerdict(settings, rules, command, CommandFilter.AliasResolver.NONE) + ", subcommand "
+                + CommandFilter.subcommandVerdict(settings, rules, command, CommandFilter.AliasResolver.NONE)
+                + (server.getCommandManager().hasCommand(label) ? "" : " (not a proxy command)"));
+
         if (server.getCommandManager().hasCommand(label)
                 && CommandFilter.commandVerdict(settings, rules, command, CommandFilter.AliasResolver.NONE) != CommandFilter.Verdict.ALLOWED) {
             // the proxy pretends not to have the command, so the backend gives the usual answer
@@ -232,6 +242,9 @@ public class CommandWhitelistVelocity implements CWCommand.Platform {
                 settings.subcommandsMode,
                 settings.matchType
         );
+
+        configCache.debug("Tab completion of " + player.getUsername() + " for \"" + event.getPartialMessage() + "\": "
+                + newSuggestions.size() + " of " + event.getSuggestions().size() + " suggestions kept");
 
         event.getSuggestions().clear();
         event.getSuggestions().addAll(newSuggestions);

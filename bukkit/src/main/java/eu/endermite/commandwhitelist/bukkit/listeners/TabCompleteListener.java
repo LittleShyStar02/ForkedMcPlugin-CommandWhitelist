@@ -35,6 +35,8 @@ public class TabCompleteListener implements Listener {
             return;
         }
 
+        plugin.getConfigCache().debug("Tab completion of " + player.getName() + " for \"" + event.getBuffer() + "\": "
+                + filtered.size() + " of " + event.getCompletions().size() + " suggestions kept");
         event.setCompletions(filtered);
     }
 }

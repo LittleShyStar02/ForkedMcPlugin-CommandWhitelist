@@ -25,6 +25,9 @@ public class CommandSendListener implements Listener {
         if (player.hasPermission(CWPermission.BYPASS.permission())) return;
 
         Settings settings = plugin.getConfigCache().get();
+        int before = event.getCommands().size();
         event.getCommands().removeIf(name -> !CommandFilter.isVisible(settings, player::hasPermission, name, plugin.aliases));
+
+        plugin.getConfigCache().debug("Command list of " + player.getName() + ": " + event.getCommands().size() + " of " + before + " commands kept");
     }
 }

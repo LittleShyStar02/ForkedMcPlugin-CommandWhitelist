@@ -37,7 +37,13 @@ public final class CommandTreeListener implements Listener {
         Settings settings = plugin.getConfigCache().get();
         Settings.Rules rules = settings.rulesFor(player::hasPermission);
 
-        if (rules.subCommands.isEmpty()) return;
+        if (rules.subCommands.isEmpty()) {
+            plugin.getConfigCache().debug("Command tree of " + player.getName() + " left untouched: no subcommand rules apply");
+            return;
+        }
+
+        plugin.getConfigCache().debug("Pruning the command tree of " + player.getName() + " with " + rules.subCommands.size()
+                + " subcommand rules (" + settings.subcommandsMode + ", " + settings.matchType + ")");
 
         for (Object root : event.getCommandNode().getChildren())
             prune((CommandNode) root, ((CommandNode) root).getName(), settings, rules);
@@ -46,8 +52,14 @@ public final class CommandTreeListener implements Listener {
     @SuppressWarnings({"rawtypes", "unchecked"})
     private void prune(CommandNode node, String path, Settings settings, Settings.Rules rules) {
         java.util.Collection<CommandNode> children = node.getChildren();
-        children.removeIf(child -> child instanceof LiteralCommandNode
-                && !CommandFilter.isBranchVisible(settings, rules, path + " " + child.getName(), plugin.aliases));
+        children.removeIf(child -> {
+            boolean hidden = child instanceof LiteralCommandNode
+                    && !CommandFilter.isBranchVisible(settings, rules, path + " " + child.getName(), plugin.aliases);
+
+            if (hidden) plugin.getConfigCache().debug("Branch removed from the command tree: /" + path + " " + child.getName());
+
+            return hidden;
+        });
 
         for (CommandNode child : children) {
             if (child instanceof LiteralCommandNode)

@@ -39,6 +39,8 @@ public class ExecuteListener implements Listener {
         Settings settings = plugin.getConfigCache().get();
         CommandFilter.Verdict verdict = CommandFilter.evaluate(settings, player::hasPermission, event.getMessage(), plugin.aliases);
 
+        plugin.getConfigCache().debug(player.getName() + " ran \"" + event.getMessage() + "\": " + verdict);
+
         if (verdict == CommandFilter.Verdict.ALLOWED) return;
 
         event.setCancelled(true);

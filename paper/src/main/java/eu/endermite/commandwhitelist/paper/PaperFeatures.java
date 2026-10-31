@@ -52,6 +52,9 @@ public final class PaperFeatures implements Listener {
             return;
         }
 
+        plugin.getConfigCache().debug("Async tab completion of " + player.getName() + " for \"" + event.getBuffer() + "\": "
+                + filtered.size() + " of " + event.getCompletions().size() + " suggestions kept");
+
         if (!event.getCompletions().isEmpty()) event.setCompletions(filtered);
     }
 }
