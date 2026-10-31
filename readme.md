@@ -19,12 +19,33 @@ precisely what commands players can see and use.
 <li>Block completion and execution of specified subcommands</li>
 </ul>
 
+<b>One jar for everything</b>: the same `CommandWhitelist-<version>.jar` works on all the software below.
+
 <b>Compatible versions</b>: 1.13+
 
 <b>Compatible software</b>:
-- Bukkit-based servers (Spigot, Paper, Airplane, Purpur, etc)
+- Bukkit-based servers (Spigot, Paper, Purpur, etc)
+- Folia
 - Waterfall (NOT Bungeecord!)
 - Velocity
+
+The groups available to a player are merged: `default` plus every group the player has the `commandwhitelist.group.<name>` permission of.
+
+<b>How commands are compared</b>:
+- `WHITELIST` compares exactly: with `ban` listed, `/Ban` is a different command and is denied.
+- `BLACKLIST` ignores case, namespace and aliases: with `ban` listed, `/BAN`, `/minecraft:ban` and aliases of it are denied, and so is `/execute run ban`. Some server versions really run `/BAN` as `ban`.
+
+The plugin does not replace permissions: a blacklist cannot know what other commands do on behalf of the player.
+
+<h3>Building and testing</h3>
+
+Requires JDK 21. The jar ends up in `build/libs`.
+
+```bash
+./gradlew shadowJar test
+```
+
+`tests/e2e` starts real servers on localhost and checks the plugin with [mineflayer](https://github.com/PrismarineJS/mineflayer) bots, see `tests/e2e/README.md`.
 
 [Download latest release](https://github.com/YouHaveTrouble/CommandWhitelist/releases/latest)
 

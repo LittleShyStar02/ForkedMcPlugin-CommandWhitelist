@@ -111,3 +111,10 @@ buildNumber.properties
 
 # Common working directory
 run/
+
+# Gradle and editors
+.gradle/
+.vscode/
+tests/e2e/node_modules/
+tests/e2e/work/
+build/
