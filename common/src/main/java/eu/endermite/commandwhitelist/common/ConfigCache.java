@@ -136,6 +136,7 @@ public class ConfigCache {
         if (newFile) {
             config.addExample("groups.example.commands", new ArrayList<>(Arrays.asList("example")), "These are the commands of the group \"example\". Depending on mode.commands, players will only be able to see/use them (WHITELIST) or will NOT be able to see/use them (BLACKLIST)");
             config.addExample("groups.example.subcommands", new ArrayList<>(Arrays.asList("example of")), "These are the subcommands of the group \"example\". Depending on mode.subcommands, players will NOT be able to see/use them (BLACKLIST) or will only be able to use these subcommands of their command (WHITELIST)");
+            config.addExample("groups.example.hidden", new ArrayList<>(Arrays.asList("example hidden")), "OPTIONAL, the key can be removed. Commands or subcommands that players can use, but that are never shown in the tab completion.\nUseful for commands run by menus (GUI), for example \"parkour prova\" works but /parkour does not suggest \"prova\".\nThey are allowed even if mode.commands or mode.subcommands would deny them.");
             config.addExample("groups.example.custom_command_denied_message", "You don't have commandwhitelist.group.example permission.", "This is a custom message that players will see when this group is the reason of the denial.\nIf you don't want to use a custom message, set custom_command_denied_message: \"\"");
             config.addComment("groups.example", "All groups except from default require commandwhitelist.group.<group_name> permission\ncommandwhitelist.group.example in this case\n If you wish to leave the list empty, put \"commands: []\" or \"subcommands: []\"");
         }
@@ -297,7 +298,39 @@ public class ConfigCache {
             subCommands.add(subCmd);
         }
 
-        return new CWGroup(id, commands, subCommands, section.getString(id + ".custom_command_denied_message"));
+        // optional: the key does not have to exist
+        Set<String> hidden = new LinkedHashSet<>();
+
+        for (String hiddenCmd : section.getStringList(id + ".hidden")) {
+            String error = hiddenEntryError(hiddenCmd, matchType);
+
+            if (error != null) {
+                logger.warn("\"" + hiddenCmd + "\" " + error + ". Skipping it.");
+                continue;
+            }
+
+            hidden.add(normalizeCommand(hiddenCmd, matchType));
+        }
+
+        return new CWGroup(id, commands, subCommands, hidden, section.getString(id + ".custom_command_denied_message"));
+    }
+
+    /**
+     * @return What is wrong with the hidden entry, null if it can be used. It is a command or a command with subcommands.
+     */
+    public static String hiddenEntryError(String hidden, MatchType matchType) {
+        if (hidden.trim().isEmpty()) return "is empty";
+
+        if (matchType == MatchType.REGEX) {
+            try {
+                CommandUtil.validateCommandRegex(hidden);
+                return null;
+            } catch (PatternSyntaxException e) {
+                return "is not a valid regular expression (" + e.getDescription() + ")";
+            }
+        }
+
+        return null;
     }
 
     /**

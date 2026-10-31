@@ -5,7 +5,7 @@ plugins {
     id("com.gradleup.shadow") version "9.6.1"
 }
 
-val pluginVersion = "2.14.2"
+val pluginVersion = "2.15.0"
 
 allprojects {
     group = "eu.endermite.commandwhitelist"

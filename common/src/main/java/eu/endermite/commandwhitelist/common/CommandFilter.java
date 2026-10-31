@@ -46,6 +46,9 @@ public final class CommandFilter {
      * Checks only the command label. Used by proxies, which decide about the label only for their own commands.
      */
     public static Verdict commandVerdict(Settings settings, Settings.Rules rules, String commandLine, AliasResolver aliases) {
+        // hidden commands can always be used, they are only left out of the suggestions
+        if (isHiddenAllowed(settings, rules, commandLine, aliases)) return Verdict.ALLOWED;
+
         List<String> tokens = CommandUtil.tokenize(commandLine);
         String label = tokens.isEmpty() ? "" : tokens.get(0);
 
@@ -63,6 +66,8 @@ public final class CommandFilter {
         List<String> tokens = CommandUtil.tokenize(commandLine);
         if (tokens.isEmpty()) return Verdict.ALLOWED;
 
+        if (isHiddenAllowed(settings, rules, commandLine, aliases)) return Verdict.ALLOWED;
+
         if (!CommandUtil.isSubcommandAllowed(settings.subcommandsMode, settings.matchType, rules.subCommands, commandLine))
             return Verdict.SUBCOMMAND_DENIED;
 
@@ -75,6 +80,41 @@ public final class CommandFilter {
         }
 
         return Verdict.ALLOWED;
+    }
+
+    /**
+     * @return True if the command line is covered by a hidden entry, under any name of the command
+     */
+    public static boolean isHiddenAllowed(Settings settings, Settings.Rules rules, String commandLine, AliasResolver aliases) {
+        if (rules.hidden.isEmpty()) return false;
+
+        if (CommandUtil.isHiddenListed(settings.matchType, rules.hidden, commandLine)) return true;
+
+        List<String> tokens = CommandUtil.tokenize(commandLine);
+
+        if (tokens.isEmpty()) return false;
+
+        for (String alias : aliases.apply(CommandUtil.stripNamespace(tokens.get(0)))) {
+            List<String> sameCommand = new ArrayList<>(tokens);
+            sameCommand.set(0, alias);
+
+            if (CommandUtil.isHiddenListed(settings.matchType, rules.hidden, String.join(" ", sameCommand))) return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Removes the suggestions of subcommands that are not allowed or that are hidden.
+     *
+     * @param buffer Command buffer, with the slash
+     */
+    public static List<String> filterSuggestions(Settings settings, Settings.Rules rules, String buffer, Collection<String> suggestions) {
+        List<String> filtered = CommandUtil.filterSuggestions(buffer, suggestions, rules.subCommands, settings.subcommandsMode, settings.matchType);
+
+        if (rules.hidden.isEmpty()) return filtered;
+
+        return CommandUtil.filterSuggestions(buffer, filtered, rules.hidden, ListMode.BLACKLIST, settings.matchType);
     }
 
     private static Verdict evaluateTarget(Settings settings, Settings.Rules rules, List<String> target, AliasResolver aliases) {
@@ -138,13 +178,13 @@ public final class CommandFilter {
                 || !isLabelAllowed(settings, rules, buffer.substring(1, commandEnd), aliases))
             return null;
 
-        List<String> filtered = CommandUtil.filterSuggestions(buffer, completions, rules.subCommands, settings.subcommandsMode, settings.matchType);
+        List<String> filtered = filterSuggestions(settings, rules, buffer, completions);
 
         // the rules written for another name of the command apply to this name too, like when the command is run
         String rest = buffer.substring(commandEnd);
 
         for (String alias : aliases.apply(CommandUtil.stripNamespace(buffer.substring(1, commandEnd))))
-            filtered = CommandUtil.filterSuggestions("/" + alias + rest, filtered, rules.subCommands, settings.subcommandsMode, settings.matchType);
+            filtered = filterSuggestions(settings, rules, "/" + alias + rest, filtered);
 
         return filtered;
     }
@@ -154,7 +194,7 @@ public final class CommandFilter {
      * @return True if the branch should be sent to the player under every name of the command
      */
     public static boolean isBranchVisible(Settings settings, Settings.Rules rules, String path, AliasResolver aliases) {
-        if (!CommandUtil.isBranchVisible(settings.subcommandsMode, settings.matchType, rules.subCommands, path)) return false;
+        if (!isBranchShown(settings, rules, path)) return false;
 
         List<String> tokens = CommandUtil.tokenize(path);
 
@@ -164,17 +204,27 @@ public final class CommandFilter {
             List<String> sameCommand = new ArrayList<>(tokens);
             sameCommand.set(0, alias);
 
-            if (!CommandUtil.isBranchVisible(settings.subcommandsMode, settings.matchType, rules.subCommands, String.join(" ", sameCommand)))
-                return false;
+            if (!isBranchShown(settings, rules, String.join(" ", sameCommand))) return false;
         }
 
         return true;
+    }
+
+    private static boolean isBranchShown(Settings settings, Settings.Rules rules, String path) {
+        if (!CommandUtil.isBranchVisible(settings.subcommandsMode, settings.matchType, rules.subCommands, path)) return false;
+
+        // a hidden branch stays out of the tree, even if the command itself is allowed
+        return rules.hidden.isEmpty()
+                || CommandUtil.isBranchVisible(ListMode.BLACKLIST, settings.matchType, rules.hidden, path);
     }
 
     /**
      * @return True if a command with this name should be shown in the command tree
      */
     public static boolean isVisible(Settings settings, Predicate<String> permissions, String name, AliasResolver aliases) {
-        return isLabelAllowed(settings, settings.rulesFor(permissions), name, aliases);
+        Settings.Rules rules = settings.rulesFor(permissions);
+
+        return isLabelAllowed(settings, rules, name, aliases)
+                && !CommandUtil.isHiddenLabel(settings.matchType, rules.hidden, name);
     }
 }

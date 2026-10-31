@@ -59,11 +59,12 @@ public final class Settings {
      * Commands and subcommands of the groups available to a player, merged together.
      */
     public static final class Rules {
-        public final Set<String> commands, subCommands;
+        public final Set<String> commands, subCommands, hidden;
 
-        Rules(Set<String> commands, Set<String> subCommands) {
+        Rules(Set<String> commands, Set<String> subCommands, Set<String> hidden) {
             this.commands = Collections.unmodifiableSet(commands);
             this.subCommands = Collections.unmodifiableSet(subCommands);
+            this.hidden = Collections.unmodifiableSet(hidden);
         }
     }
 
@@ -87,13 +88,15 @@ public final class Settings {
     private Rules merge(BitSet available) {
         Set<String> commands = new LinkedHashSet<>();
         Set<String> subCommands = new LinkedHashSet<>();
+        Set<String> hidden = new LinkedHashSet<>();
 
         for (int i = available.nextSetBit(0); i >= 0; i = available.nextSetBit(i + 1)) {
             commands.addAll(groupOrder.get(i).getCommands());
             subCommands.addAll(groupOrder.get(i).getSubCommands());
+            hidden.addAll(groupOrder.get(i).getHidden());
         }
 
-        return new Rules(commands, subCommands);
+        return new Rules(commands, subCommands, hidden);
     }
 
     /**

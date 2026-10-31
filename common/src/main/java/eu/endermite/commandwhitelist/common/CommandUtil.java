@@ -243,6 +243,80 @@ public final class CommandUtil {
         return isSubcommandAllowed(mode, matchType, subCommands, path);
     }
 
+    /**
+     * Checks if a command line is covered by an entry of the hidden lists. Such a line can be used even if the
+     * other lists would deny it, but it is never suggested. An entry is a command ("spawn") or a command with
+     * subcommands ("parkour prova"), and it also covers the line when further arguments follow it.
+     *
+     * @param matchType   How the hidden entries are compared with the command line
+     * @param hidden      Hidden entries of the groups available to the player
+     * @param commandLine Full command line, with or without the slash
+     * @return True if the command line can be used
+     */
+    public static boolean isHiddenListed(MatchType matchType, Collection<String> hidden, String commandLine) {
+        if (hidden.isEmpty()) return false;
+
+        List<String> line = tokenize(commandLine);
+
+        if (line.isEmpty()) return false;
+
+        List<String> plainLine = withoutNamespace(line);
+
+        if (matchType == MatchType.REGEX) {
+            String joinedLine = String.join(" ", line);
+            String joinedPlainLine = String.join(" ", plainLine);
+            try {
+                for (String regex : hidden) {
+                    Pattern pattern = subcommandPattern(regex, ListMode.BLACKLIST);
+                    if (matches(pattern, regex, joinedLine) || matches(pattern, regex, joinedPlainLine)) return true;
+                }
+            } catch (RegexBudgetExceededException e) {
+                return false;
+            }
+
+            return false;
+        }
+
+        for (String listed : hidden) {
+            List<String> entry = tokenize(listed);
+
+            if (entry.isEmpty()) continue;
+
+            if (startsWithIgnoreCase(line, entry) || startsWithIgnoreCase(plainLine, entry)) return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * @return True if the label is a hidden command of its own (an entry of a single word), which must not be suggested
+     */
+    public static boolean isHiddenLabel(MatchType matchType, Collection<String> hidden, String label) {
+        if (hidden.isEmpty()) return false;
+
+        String plain = stripNamespace(label);
+
+        try {
+            for (String listed : hidden) {
+                if (matchType == MatchType.REGEX) {
+                    if (firstWordOf(listed).length() == listed.length()
+                            && (matches(compile(listed, ListMode.BLACKLIST), listed, label)
+                            || matches(compile(listed, ListMode.BLACKLIST), listed, plain))) return true;
+                    continue;
+                }
+
+                List<String> entry = tokenize(listed);
+
+                if (entry.size() == 1 && (entry.get(0).equalsIgnoreCase(label) || entry.get(0).equalsIgnoreCase(plain)))
+                    return true;
+            }
+        } catch (RegexBudgetExceededException e) {
+            return false;
+        }
+
+        return false;
+    }
+
     private static boolean isSubcommandAllowedRegex(ListMode mode, Collection<String> listedSubCommands, List<String> line, List<String> plainLine) {
         String joinedLine = String.join(" ", line);
         String joinedPlainLine = String.join(" ", plainLine);

@@ -197,6 +197,37 @@ class ConfigAndFilterTest {
     }
 
     @Test
+    void hiddenEntriesCanBeUsedButAreNotSuggested() throws IOException {
+        write("mode:", "  commands: WHITELIST", "  subcommands: WHITELIST", "groups:", "  default:",
+                "    commands: [parkour, spawn]", "    subcommands: ['parkour list']", "    hidden: ['parkour prova', gui]");
+        Settings settings = new ConfigCache(file(), true, logger).get();
+        Settings.Rules rules = settings.rulesFor(NOBODY);
+        CommandFilter.AliasResolver none = CommandFilter.AliasResolver.NONE;
+
+        // executed from a menu: allowed although the whitelists do not list it
+        assertEquals(ALLOWED, CommandFilter.evaluate(settings, NOBODY, "/parkour prova", none));
+        assertEquals(ALLOWED, CommandFilter.evaluate(settings, NOBODY, "/parkour prova now", none));
+        assertEquals(ALLOWED, CommandFilter.evaluate(settings, NOBODY, "/gui open", none));
+        assertEquals(ALLOWED, CommandFilter.evaluate(settings, NOBODY, "/parkour list", none));
+        // anything else of the command stays restricted
+        assertEquals(SUBCOMMAND_DENIED, CommandFilter.evaluate(settings, NOBODY, "/parkour other", none));
+        assertEquals(COMMAND_DENIED, CommandFilter.evaluate(settings, NOBODY, "/guix", none));
+
+        // never suggested
+        assertEquals(Arrays.asList("list"), CommandFilter.filterSuggestions(settings, rules, "/parkour ", Arrays.asList("list", "prova")));
+        assertFalse(CommandFilter.isVisible(settings, NOBODY, "gui", none));
+        assertTrue(CommandFilter.isVisible(settings, NOBODY, "parkour", none));
+        assertFalse(CommandFilter.isBranchVisible(settings, rules, "parkour prova", none));
+        assertTrue(CommandFilter.isBranchVisible(settings, rules, "parkour list", none));
+    }
+
+    @Test
+    void hiddenKeyIsOptional() throws IOException {
+        assertTrue(twoGroups("WHITELIST").get().groups.get("default").getHidden().isEmpty());
+        assertFalse(twoGroups("WHITELIST").get().groups.get("default").serialize().containsKey("hidden"));
+    }
+
+    @Test
     void messageComesFromTheGroupThatCausedTheDenial() throws IOException {
         Settings whitelist = twoGroups("WHITELIST").get();
         assertEquals("vip only", whitelist.commandDeniedMessage("fly", NOBODY));

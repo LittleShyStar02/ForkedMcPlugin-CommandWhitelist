@@ -140,7 +140,7 @@ public final class CommandWhitelistWaterfall extends Plugin implements CWCommand
         Settings.Rules rules = settings.rulesFor(player::hasPermission);
 
         if (!proxyCommand) {
-            filter(event, eu.endermite.commandwhitelist.common.CommandUtil.filterSuggestions(cursor, event.getSuggestions(), rules.subCommands, settings.subcommandsMode, settings.matchType));
+            filter(event, CommandFilter.filterSuggestions(settings, rules, cursor, event.getSuggestions()));
             return;
         }
 

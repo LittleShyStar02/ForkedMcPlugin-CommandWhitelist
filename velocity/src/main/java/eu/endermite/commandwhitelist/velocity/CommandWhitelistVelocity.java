@@ -102,7 +102,7 @@ public class CommandWhitelistVelocity implements CWCommand.Platform {
 
         configCache.debug("Command list of " + player.getUsername() + ": " + event.getRootNode().getChildren().size() + " of " + before + " commands kept");
 
-        if (rules.subCommands.isEmpty()) return;
+        if (rules.subCommands.isEmpty() && rules.hidden.isEmpty()) return;
 
         for (CommandNode<?> root : event.getRootNode().getChildren()) {
             boolean listed = settings.debug && rules.subCommands.stream()
@@ -236,12 +236,11 @@ public class CommandWhitelistVelocity implements CWCommand.Platform {
 
         Settings settings = configCache.get();
 
-        List<String> newSuggestions = CommandUtil.filterSuggestions(
+        List<String> newSuggestions = CommandFilter.filterSuggestions(
+                settings,
+                settings.rulesFor(player::hasPermission),
                 event.getPartialMessage(),
-                event.getSuggestions(),
-                settings.rulesFor(player::hasPermission).subCommands,
-                settings.subcommandsMode,
-                settings.matchType
+                event.getSuggestions()
         );
 
         configCache.debug("Tab completion of " + player.getUsername() + " for \"" + event.getPartialMessage() + "\": "

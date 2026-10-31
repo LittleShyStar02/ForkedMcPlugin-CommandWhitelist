@@ -37,7 +37,7 @@ public final class CommandTreeListener implements Listener {
         Settings settings = plugin.getConfigCache().get();
         Settings.Rules rules = settings.rulesFor(player::hasPermission);
 
-        if (rules.subCommands.isEmpty()) {
+        if (rules.subCommands.isEmpty() && rules.hidden.isEmpty()) {
             plugin.getConfigCache().debug("Command tree of " + player.getName() + " left untouched: no subcommand rules apply");
             return;
         }
