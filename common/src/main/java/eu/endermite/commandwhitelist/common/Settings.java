@@ -128,9 +128,13 @@ public final class Settings {
     }
 
     static final class Builder {
-        String prefix = "CommandWhitelist > ";
-        String commandDenied = "No such command.";
-        String subcommandDenied = "You cannot use this subcommand";
+        static final String OLD_PREFIX = "CommandWhitelist > ";
+        static final String OLD_COMMAND_DENIED = "No such command.";
+        static final String OLD_SUBCOMMAND_DENIED = "You cannot use this subcommand";
+
+        String prefix = "<gold>CommandWhitelist <dark_gray>> <reset>";
+        String commandDenied = "<red>No such command.";
+        String subcommandDenied = "<red>You cannot use this subcommand";
         String noPermission = "<red>You don't have permission to do this.";
         String configReloaded = "<yellow>Configuration reloaded.";
         String configReloadFailed = "<red>Configuration could not be loaded, the previous one stays active. Check the console.";

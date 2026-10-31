@@ -1,5 +1,6 @@
 package eu.endermite.commandwhitelist.bukkit;
 
+import eu.endermite.commandwhitelist.common.CWMessages;
 import eu.endermite.commandwhitelist.common.Messenger;
 import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.key.Key;
@@ -28,7 +29,7 @@ public final class BukkitMessenger implements Messenger {
         List<TagResolver> resolvers = new ArrayList<>();
         for (Map.Entry<String, String> placeholder : placeholders.entrySet())
             resolvers.add(Placeholder.unparsed(placeholder.getKey(), placeholder.getValue()));
-        return MiniMessage.miniMessage().deserialize(miniMessage, TagResolver.resolver(resolvers));
+        return MiniMessage.miniMessage().deserialize(CWMessages.toMiniMessage(miniMessage), TagResolver.resolver(resolvers));
     }
 
     @Override

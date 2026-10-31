@@ -23,6 +23,7 @@ import eu.endermite.commandwhitelist.common.CommandUtil;
 import eu.endermite.commandwhitelist.common.ConfigCache;
 import eu.endermite.commandwhitelist.common.ListMode;
 import eu.endermite.commandwhitelist.common.MatchType;
+import eu.endermite.commandwhitelist.common.CWMessages;
 import eu.endermite.commandwhitelist.common.Messenger;
 import eu.endermite.commandwhitelist.common.Settings;
 import eu.endermite.commandwhitelist.common.commands.CWCommand;
@@ -305,7 +306,7 @@ public class CommandWhitelistVelocity implements CWCommand.Platform {
             for (Map.Entry<String, String> placeholder : placeholders.entrySet())
                 resolvers.add(Placeholder.unparsed(placeholder.getKey(), placeholder.getValue()));
 
-            return MiniMessage.miniMessage().deserialize(miniMessage, TagResolver.resolver(resolvers));
+            return MiniMessage.miniMessage().deserialize(CWMessages.toMiniMessage(miniMessage), TagResolver.resolver(resolvers));
         }
 
         @Override

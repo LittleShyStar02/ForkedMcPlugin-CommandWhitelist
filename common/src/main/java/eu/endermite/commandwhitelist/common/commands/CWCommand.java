@@ -83,7 +83,7 @@ public final class CWCommand {
         }
 
         if (args.length < 3) {
-            out.chat("/" + label + " " + action + " \\<group> \\<" + (action.endsWith("sub") ? "subcommand" : "command") + ">", Collections.<String, String>emptyMap());
+            out.chat("<red>Usage: <aqua>/" + label + " " + action + " \\<group> \\<" + (action.endsWith("sub") ? "subcommand" : "command") + ">", Collections.<String, String>emptyMap());
             return;
         }
 
@@ -130,9 +130,9 @@ public final class CWCommand {
     }
 
     private static void dump(Platform platform, Messenger out) {
-        out.chat("Dumping all available commands to a file...", Collections.<String, String>emptyMap());
+        out.chat("<yellow>Dumping all available commands to a file...", Collections.<String, String>emptyMap());
         boolean saved = dumpCommands(new ArrayList<>(platform.serverCommands()), platform.dumpFile(), platform.config());
-        out.chat(saved ? "Commands dumped to command_dump.yml" : "Failed to save the file.", Collections.<String, String>emptyMap());
+        out.chat(saved ? "<green>Commands dumped to <gold>command_dump.yml" : "<red>Failed to save the file.", Collections.<String, String>emptyMap());
     }
 
     /**

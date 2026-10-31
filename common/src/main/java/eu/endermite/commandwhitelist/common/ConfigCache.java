@@ -97,10 +97,16 @@ public class ConfigCache {
     private void addDefaults(ConfigFile config, boolean newFile) {
         config.addDefault("debug", false, "Writes to the console what the plugin decides, for finding why a command is or is not filtered.");
 
-        config.addDefault("messages.prefix", "CommandWhitelist > ");
+        Settings.Builder defaults = new Settings.Builder();
+
+        // files written by older versions have the uncolored defaults: those get the colored ones, edited values stay
+        upgradeDefault(config, "messages.prefix", Settings.Builder.OLD_PREFIX, defaults.prefix);
+        config.addDefault("messages.prefix", defaults.prefix);
         if (supportsCommandDeniedMessage) {
-            config.addDefault("messages.command_denied", "No such command.");
-            config.addDefault("messages.subcommand_denied", "You cannot use this subcommand");
+            upgradeDefault(config, "messages.command_denied", Settings.Builder.OLD_COMMAND_DENIED, defaults.commandDenied);
+            upgradeDefault(config, "messages.subcommand_denied", Settings.Builder.OLD_SUBCOMMAND_DENIED, defaults.subcommandDenied);
+            config.addDefault("messages.command_denied", defaults.commandDenied);
+            config.addDefault("messages.subcommand_denied", defaults.subcommandDenied);
         }
 
         config.addDefault("messages.no_permission", "<red>You don't have permission to do this.");
@@ -111,7 +117,7 @@ public class ConfigCache {
         config.addDefault("messages.group_doesnt_exist", "<red>Group doesn't exist or error occured");
         config.addDefault("messages.invalid_entry", "<red>Not a valid entry: <gold><command>");
 
-        config.addComment("messages", "Messages use MiniMessage formatting (https://docs.advntr.dev/minimessage/format.html)");
+        config.addComment("messages", "Messages use MiniMessage formatting (https://docs.advntr.dev/minimessage/format.html)\nThe legacy codes like &c and &#ff8800 work too.");
 
         config.addDefault("mode.commands", ListMode.WHITELIST.toString(), "How the \"commands\" lists of the groups are interpreted.\nWHITELIST - players can only see/use the listed commands, written exactly as listed\nBLACKLIST - players can see/use every command except the listed ones, however they are written");
         config.addDefault("mode.subcommands", ListMode.BLACKLIST.toString(), "How the \"subcommands\" lists of the groups are interpreted.\nBLACKLIST - players cannot see/use the listed subcommands\nWHITELIST - a command with listed subcommands can only be used with one of them\n(commands that have no listed subcommands are not restricted)");
@@ -142,6 +148,10 @@ public class ConfigCache {
             config.addDefault("groups.default.commands", defaultCommands);
             config.addDefault("groups.default.subcommands", defaultSubcommands);
         }
+    }
+
+    private static void upgradeDefault(ConfigFile config, String path, String oldDefault, String newDefault) {
+        if (oldDefault.equals(config.getString(path))) config.set(path, newDefault);
     }
 
     private Settings.Builder read(ConfigFile config) {

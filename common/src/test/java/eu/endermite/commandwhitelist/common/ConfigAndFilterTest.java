@@ -120,8 +120,8 @@ class ConfigAndFilterTest {
     void brokenFileAtStartHasNoNullMessages() throws IOException {
         write("groups:", "  default: [", "  : :");
         Settings settings = new ConfigCache(file(), true, logger).get();
-        assertEquals("CommandWhitelist > ", settings.prefix);
-        assertEquals("No such command.", settings.commandDenied);
+        assertEquals("<gold>CommandWhitelist <dark_gray>> <reset>", settings.prefix);
+        assertEquals("<red>No such command.", settings.commandDenied);
         assertEquals(COMMAND_DENIED, CommandFilter.evaluate(settings, NOBODY, "/anything", CommandFilter.AliasResolver.NONE));
     }
 
@@ -200,15 +200,23 @@ class ConfigAndFilterTest {
     void messageComesFromTheGroupThatCausedTheDenial() throws IOException {
         Settings whitelist = twoGroups("WHITELIST").get();
         assertEquals("vip only", whitelist.commandDeniedMessage("fly", NOBODY));
-        assertEquals("No such command.", whitelist.commandDeniedMessage("ban", NOBODY));
+        assertEquals("<red>No such command.", whitelist.commandDeniedMessage("ban", NOBODY));
         Settings blacklist = twoGroups("BLACKLIST").get();
         // a blacklist denies through the groups the player has, not the ones the player is missing
-        assertEquals("No such command.", blacklist.commandDeniedMessage("fly", NOBODY));
+        assertEquals("<red>No such command.", blacklist.commandDeniedMessage("fly", NOBODY));
         assertEquals("vip only", blacklist.commandDeniedMessage("fly", "commandwhitelist.group.vip"::equals));
     }
 
     @Test
     void oldPlaceholdersKeepWorking() {
         assertEquals("<command> for <group>", CWMessages.legacyPlaceholders("%s for %s"));
+    }
+
+    @Test
+    void legacyColorCodesBecomeMiniMessage() {
+        assertEquals("<red>no <bold>x<reset>", CWMessages.toMiniMessage("&cno &lx&r"));
+        assertEquals("<#ff8800>hex", CWMessages.toMiniMessage("&#ff8800hex"));
+        assertEquals("<gold>sect", CWMessages.toMiniMessage("§6sect"));
+        assertEquals("Tom & Jerry <red>ok", CWMessages.toMiniMessage("Tom & Jerry <red>ok"));
     }
 }
