@@ -60,8 +60,10 @@ public final class CWGroup {
         Map<String, Object> serializedGroup = new LinkedHashMap<>();
         serializedGroup.put("commands", new ArrayList<>(commands));
         serializedGroup.put("subcommands", new ArrayList<>(subCommands));
+
         if (commandDeniedMessage != null)
             serializedGroup.put("custom_command_denied_message", commandDeniedMessage);
+
         return serializedGroup;
     }
 }

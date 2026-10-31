@@ -80,16 +80,19 @@ public final class Settings {
             CWGroup group = groupOrder.get(i);
             if (isDefault(group) || permissions.test(group.getPermission())) available.set(i);
         }
+
         return rulesCache.computeIfAbsent(available, this::merge);
     }
 
     private Rules merge(BitSet available) {
         Set<String> commands = new LinkedHashSet<>();
         Set<String> subCommands = new LinkedHashSet<>();
+
         for (int i = available.nextSetBit(0); i >= 0; i = available.nextSetBit(i + 1)) {
             commands.addAll(groupOrder.get(i).getCommands());
             subCommands.addAll(groupOrder.get(i).getSubCommands());
         }
+
         return new Rules(commands, subCommands);
     }
 
@@ -105,13 +108,18 @@ public final class Settings {
         for (CWGroup group : groupOrder) {
             String custom = group.getCommandDeniedMessage();
             if (custom == null || custom.isEmpty()) continue;
+
             boolean available = isDefault(group) || permissions.test(group.getPermission());
+
             if (available != (commandsMode == ListMode.BLACKLIST)) continue;
+
             if (!CommandUtil.isCommandListed(commandsMode, matchType, group.getCommands(), label)
                     && !CommandUtil.isCommandListed(commandsMode, matchType, group.getCommands(), CommandUtil.stripNamespace(label)))
                 continue;
+
             return custom;
         }
+
         return commandDenied;
     }
 

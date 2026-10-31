@@ -70,8 +70,10 @@ public final class CommandUtil {
     public static boolean isCommandAllowed(ListMode mode, MatchType matchType, Collection<String> listedCommands, String label) {
         try {
             boolean listed = isCommandListed(mode, matchType, listedCommands, label);
+
             if (mode == ListMode.WHITELIST) return listed;
             if (listed) return false;
+
             String withoutNamespace = stripNamespace(label);
             return withoutNamespace.equals(label) || !isCommandListed(mode, matchType, listedCommands, withoutNamespace);
         } catch (RegexBudgetExceededException e) {
@@ -90,14 +92,18 @@ public final class CommandUtil {
         if (matchType == MatchType.LITERAL) {
             if (listedCommands.contains(label)) return true;
             if (mode == ListMode.WHITELIST) return false;
+
             for (String listed : listedCommands) {
                 if (listed.equalsIgnoreCase(label)) return true;
             }
+
             return false;
         }
+
         for (String regex : listedCommands) {
             if (matches(compile(regex, mode), regex, label)) return true;
         }
+
         return false;
     }
 
@@ -121,25 +127,37 @@ public final class CommandUtil {
      */
     public static boolean isSubcommandAllowed(ListMode mode, MatchType matchType, Collection<String> listedSubCommands, String commandLine) {
         List<String> line = tokenize(commandLine);
+
         if (line.isEmpty()) return true;
+
         // a command used without any argument does not use a subcommand
         if (mode == ListMode.WHITELIST && line.size() < 2) return true;
+
         List<String> plainLine = withoutNamespace(line);
+
         if (matchType == MatchType.REGEX)
             return isSubcommandAllowedRegex(mode, listedSubCommands, line, plainLine);
+
         boolean restricted = false;
+
         for (String listed : listedSubCommands) {
             List<String> entry = tokenize(listed);
+
             if (entry.isEmpty()) continue;
+
             if (mode == ListMode.BLACKLIST) {
                 if (startsWithIgnoreCase(line, entry) || startsWithIgnoreCase(plainLine, entry)) return false;
                 continue;
             }
+
             // the case does not decide if a command is restricted, otherwise /LP would escape the rules of lp
             if (!entry.get(0).equalsIgnoreCase(line.get(0)) && !entry.get(0).equalsIgnoreCase(plainLine.get(0))) continue;
+
             if (startsWithTokens(line, entry) || startsWithTokens(plainLine, entry)) return true;
+
             restricted = true;
         }
+
         return mode == ListMode.BLACKLIST || !restricted;
     }
 
@@ -156,41 +174,59 @@ public final class CommandUtil {
      */
     public static List<String> filterSuggestions(String buffer, Collection<String> suggestions, Collection<String> subCommands, ListMode mode, MatchType matchType) {
         List<String> suggestionsList = new ArrayList<>(suggestions);
+
         if (suggestions.isEmpty() || subCommands.isEmpty()) return suggestionsList;
+
         if (buffer.startsWith("/"))
             buffer = buffer.substring(1);
+
         int lastSpace = buffer.lastIndexOf(' ');
+
         if (lastSpace < 0) return suggestionsList;
+
         // words that are already completed, the one currently being typed is not included
         List<String> typed = withoutNamespace(tokenize(buffer.substring(0, lastSpace)));
+
         if (typed.isEmpty()) return suggestionsList;
+
         if (matchType == MatchType.REGEX)
             return filterSuggestionsRegex(typed, suggestionsList, subCommands, mode);
 
         typed = lowerCase(typed);
+
         if (mode == ListMode.BLACKLIST) {
             Set<String> denied = new HashSet<>();
+
             for (String s : subCommands) {
                 List<String> entry = lowerCase(withoutNamespace(tokenize(s)));
+
                 if (entry.size() == typed.size() + 1 && startsWithTokens(entry, typed))
                     denied.add(entry.get(typed.size()));
             }
+
             suggestionsList.removeIf(suggestion -> denied.contains(suggestion.toLowerCase(Locale.ROOT)));
             return suggestionsList;
         }
 
         boolean restricted = false;
         Set<String> allowedNext = new HashSet<>();
+
         for (String listed : subCommands) {
             List<String> entry = lowerCase(withoutNamespace(tokenize(listed)));
+
             if (entry.isEmpty() || !entry.get(0).equals(typed.get(0))) continue;
+
             // a whitelisted subcommand is already fully typed, the rest is not restricted
             if (startsWithTokens(typed, entry)) return suggestionsList;
+
             restricted = true;
+
             if (entry.size() > typed.size() && startsWithTokens(entry, typed))
                 allowedNext.add(entry.get(typed.size()));
         }
+
         if (!restricted) return suggestionsList;
+
         suggestionsList.removeIf(suggestion -> !allowedNext.contains(suggestion.toLowerCase(Locale.ROOT)));
         return suggestionsList;
     }
@@ -212,16 +248,22 @@ public final class CommandUtil {
         String joinedPlainLine = String.join(" ", plainLine);
         try {
             boolean restricted = false;
+
             for (String regex : listedSubCommands) {
                 Pattern pattern = subcommandPattern(regex, mode);
+
                 if (mode == ListMode.BLACKLIST) {
                     if (matches(pattern, regex, joinedLine) || matches(pattern, regex, joinedPlainLine)) return false;
                     continue;
                 }
+
                 if (!appliesToCommand(regex, line.get(0)) && !appliesToCommand(regex, plainLine.get(0))) continue;
+
                 if (matches(pattern, regex, joinedLine) || matches(pattern, regex, joinedPlainLine)) return true;
+
                 restricted = true;
             }
+
             return mode == ListMode.BLACKLIST || !restricted;
         } catch (RegexBudgetExceededException e) {
             return false;
@@ -236,23 +278,31 @@ public final class CommandUtil {
                     for (String regex : subCommands) {
                         if (matches(subcommandPattern(regex, mode), regex, completed + suggestion)) return true;
                     }
+
                     return false;
                 });
+
                 return suggestionsList;
             }
+
             boolean restricted = false;
+
             for (String regex : subCommands) {
                 if (appliesToCommand(regex, typed.get(0))) {
                     restricted = true;
                     break;
                 }
             }
+
             if (!restricted) return suggestionsList;
+
             suggestionsList.removeIf(suggestion -> {
                 for (String regex : subCommands) {
                     if (!appliesToCommand(regex, typed.get(0))) continue;
+
                     // the candidate is either allowed already or can still become allowed when typed further
                     Matcher matcher = subcommandPattern(regex, mode).matcher(new BudgetedInput(completed + suggestion));
+
                     try {
                         if (matcher.matches() || matcher.hitEnd()) return false;
                     } catch (StackOverflowError e) {
@@ -261,8 +311,10 @@ public final class CommandUtil {
                         throw stopped(regex);
                     }
                 }
+
                 return true;
             });
+
             return suggestionsList;
         } catch (RegexBudgetExceededException e) {
             return new ArrayList<>();
@@ -324,8 +376,10 @@ public final class CommandUtil {
     static String firstWordOf(String regex) {
         int groupDepth = 0;
         boolean inClass = false;
+
         for (int i = 0; i < regex.length(); i++) {
             char c = regex.charAt(i);
+
             if (c == '\\') {
                 if (!inClass && groupDepth == 0 && i + 1 < regex.length()
                         && (regex.charAt(i + 1) == 's' || regex.charAt(i + 1) == ' '))
@@ -343,6 +397,7 @@ public final class CommandUtil {
                 return regex.substring(0, i);
             }
         }
+
         return regex;
     }
 
@@ -363,9 +418,12 @@ public final class CommandUtil {
      */
     public static void validateSubcommandRegex(String regex) throws PatternSyntaxException {
         Pattern.compile(regex);
+
         String commandRegex = firstWordOf(regex);
+
         if (commandRegex.length() == regex.length())
             throw new IllegalArgumentException("no space between the command and the subcommand");
+
         Pattern.compile(commandRegex);
     }
 
@@ -417,11 +475,14 @@ public final class CommandUtil {
     public static List<String> tokenize(String commandLine) {
         if (commandLine.startsWith("/"))
             commandLine = commandLine.substring(1);
+
         List<String> tokens = new ArrayList<>();
+
         for (String token : commandLine.split("\\s+")) {
             if (!token.isEmpty())
                 tokens.add(token);
         }
+
         return tokens;
     }
 
@@ -436,13 +497,16 @@ public final class CommandUtil {
         if (tokens.isEmpty() || tokens.get(0).indexOf(':') < 0) return tokens;
         List<String> plain = new ArrayList<>(tokens);
         plain.set(0, stripNamespace(tokens.get(0)));
+
         return plain;
     }
 
     private static List<String> lowerCase(List<String> tokens) {
         List<String> lower = new ArrayList<>(tokens.size());
+
         for (String token : tokens)
             lower.add(token.toLowerCase(Locale.ROOT));
+
         return lower;
     }
 
@@ -459,6 +523,7 @@ public final class CommandUtil {
         for (int i = 0; i < prefix.size(); i++) {
             if (!tokens.get(i).equalsIgnoreCase(prefix.get(i))) return false;
         }
+
         return true;
     }
 

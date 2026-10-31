@@ -25,8 +25,11 @@ public class WaterfallDefineCommandsListener implements Listener {
     @EventHandler
     public void onProxyDefineCommandsEvent(io.github.waterfallmc.waterfall.event.ProxyDefineCommandsEvent event) {
         if (!(event.getReceiver() instanceof ProxiedPlayer)) return;
+
         ProxiedPlayer player = (ProxiedPlayer) event.getReceiver();
+
         if (player.hasPermission(CWPermission.BYPASS.permission())) return;
+
         Settings settings = plugin.getConfigCache().get();
 
         // the names of every command are collected once, so one player joining costs a single pass over the commands

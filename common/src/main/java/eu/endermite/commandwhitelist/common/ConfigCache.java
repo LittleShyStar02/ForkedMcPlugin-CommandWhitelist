@@ -66,9 +66,12 @@ public class ConfigCache {
             logger.warn("Could not load " + configFile + ": " + e);
             return false;
         }
+
         try {
             addDefaults(loaded, newFile);
+
             Settings.Builder values = read(loaded);
+
             config = loaded;
             CommandUtil.clearPatternCache();
             settings = new Settings(values);
@@ -76,6 +79,7 @@ public class ConfigCache {
             logger.warn("Could not read " + configFile + ": " + e);
             return false;
         }
+
         return saveConfig();
     }
 
@@ -152,33 +156,42 @@ public class ConfigCache {
         b.removedFromWhitelist = config.getString("messages.removed_from_whitelist", b.removedFromWhitelist);
         b.groupDoesntExist = config.getString("messages.group_doesnt_exist", b.groupDoesntExist);
         b.invalidEntry = config.getString("messages.invalid_entry", b.invalidEntry);
+
         if (config.getBoolean("use_protocollib", false))
             logger.warn("use_protocollib is not supported anymore and has no effect, commands are always filtered with the regular listeners.");
+
         b.debug = config.getBoolean("debug", false);
         b.commandsMode = loadListMode(config, "mode.commands", ListMode.WHITELIST);
         b.subcommandsMode = loadListMode(config, "mode.subcommands", ListMode.BLACKLIST);
         b.matchType = loadMatchType(config);
+
         if (supportsCommandDeniedMessage) {
             b.messageType = loadMessageType(config);
             readSound(config, b);
         }
+
         ConfigSection groupSection = config.getConfigSection("groups");
+
         if (groupSection != null) {
             for (String key : groupSection.getKeys(false)) {
                 b.groups.put(key, loadCWGroup(key, groupSection, b.matchType));
             }
         }
+
         return b;
     }
 
     private void readSound(ConfigFile config, Settings.Builder b) {
         b.soundEnabled = config.getBoolean("command_denied_sound.enabled", false);
         if (!b.soundEnabled) return;
+
         String key = config.getString("command_denied_sound.key");
+
         if (key == null || !SOUND_KEY.matcher(key.toLowerCase(Locale.ROOT)).matches()) {
             logger.warn("Invalid sound key. Using " + DEFAULT_SOUND_KEY);
             key = DEFAULT_SOUND_KEY;
         }
+
         b.soundKey = key.toLowerCase(Locale.ROOT);
         b.soundVolume = config.getFloat("command_denied_sound.volume");
         b.soundPitch = config.getFloat("command_denied_sound.pitch");
@@ -190,6 +203,7 @@ public class ConfigCache {
             if (value != null) return MessageType.valueOf(value.trim().toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException ignored) {
         }
+
         logger.warn("Invalid message type. Using CHAT.");
         return MessageType.CHAT;
     }
@@ -200,6 +214,7 @@ public class ConfigCache {
             logger.warn("Invalid " + path + ". Using " + fallback + ".");
             return fallback;
         }
+
         try {
             return ListMode.valueOf(value.trim().toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException e) {
@@ -211,12 +226,16 @@ public class ConfigCache {
     private MatchType loadMatchType(ConfigFile config) {
         String value = config.getString("mode.match_type");
         if (value == null) value = config.getString("mode.matchtype");
+
         if (value == null) {
             logger.warn("Invalid mode.match_type. Using " + MatchType.LITERAL + ".");
             return MatchType.LITERAL;
         }
+
         value = value.trim().toUpperCase(Locale.ROOT);
+
         if (value.equals("NORMAL")) return MatchType.LITERAL;
+
         try {
             return MatchType.valueOf(value);
         } catch (IllegalArgumentException e) {
@@ -243,23 +262,31 @@ public class ConfigCache {
 
     private CWGroup loadCWGroup(String id, ConfigSection section, MatchType matchType) {
         Set<String> commands = new LinkedHashSet<>();
+
         for (String cmd : section.getStringList(id + ".commands")) {
             String error = commandEntryError(cmd, matchType);
+
             if (error != null) {
                 logger.warn("\"" + cmd + "\" " + error + ". Skipping it.");
                 continue;
             }
+
             commands.add(normalizeCommand(cmd, matchType));
         }
+
         Set<String> subCommands = new LinkedHashSet<>();
+
         for (String subCmd : section.getStringList(id + ".subcommands")) {
             String error = subcommandEntryError(subCmd, matchType);
+
             if (error != null) {
                 logger.warn("\"" + subCmd + "\" " + error + ". Skipping it.");
                 continue;
             }
+
             subCommands.add(subCmd);
         }
+
         return new CWGroup(id, commands, subCommands, section.getString(id + ".custom_command_denied_message"));
     }
 
@@ -268,7 +295,9 @@ public class ConfigCache {
      */
     public static String normalizeCommand(String command, MatchType matchType) {
         command = command.trim();
+
         if (matchType == MatchType.REGEX) return command;
+
         return command.startsWith("/") ? command.substring(1) : command;
     }
 
@@ -277,6 +306,7 @@ public class ConfigCache {
      */
     public static String commandEntryError(String command, MatchType matchType) {
         if (command.trim().isEmpty()) return "is empty";
+
         if (matchType == MatchType.REGEX) {
             try {
                 CommandUtil.validateCommandRegex(command);
@@ -285,6 +315,7 @@ public class ConfigCache {
                 return "is not a valid regular expression (" + e.getDescription() + ")";
             }
         }
+
         return normalizeCommand(command, matchType).contains(" ") ? "is not a command, it has more than one word" : null;
     }
 
@@ -302,6 +333,7 @@ public class ConfigCache {
                 return "is not a subcommand (" + e.getMessage() + ")";
             }
         }
+
         return CommandUtil.tokenize(subCommand).size() < 2 ? "is not a subcommand" : null;
     }
 
@@ -312,14 +344,20 @@ public class ConfigCache {
      */
     public synchronized boolean editGroup(String id, Function<CWGroup, CWGroup> change) {
         CWGroup group = settings.groups.get(id);
+
         if (group == null || config == null) return false;
+
         CWGroup changed = change.apply(group);
         Settings.Builder values = read(config);
+
         config.set("groups." + id, changed.serialize());
+
         Map<String, CWGroup> groups = new LinkedHashMap<>(settings.groups);
         groups.put(id, changed);
+
         values.groups = groups;
         settings = new Settings(values);
+
         return saveConfig();
     }
 }

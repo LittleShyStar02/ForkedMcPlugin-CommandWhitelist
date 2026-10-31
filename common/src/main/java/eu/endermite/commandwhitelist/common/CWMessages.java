@@ -23,6 +23,7 @@ public final class CWMessages {
         Map<String, String> placeholders = new HashMap<>();
         placeholders.put("command", command);
         placeholders.put("group", group);
+
         return placeholders;
     }
 
@@ -32,8 +33,11 @@ public final class CWMessages {
 
     static void denied(Settings settings, Messenger messenger, String message, String commandLine) {
         Map<String, String> placeholders = Collections.singletonMap("command", commandLine);
+
         if (settings.messageType != MessageType.ACTIONBAR) messenger.chat(message, placeholders);
+
         if (settings.messageType != MessageType.CHAT) messenger.actionBar(message, placeholders);
+
         if (settings.soundEnabled) messenger.sound(settings.soundKey, settings.soundVolume, settings.soundPitch);
     }
 }

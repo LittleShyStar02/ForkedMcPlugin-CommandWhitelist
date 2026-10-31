@@ -22,14 +22,19 @@ public class TabCompleteListener implements Listener {
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onCommandTabComplete(TabCompleteEvent event) {
         if (!(event.getSender() instanceof Player)) return;
+
         Player player = (Player) event.getSender();
+
         if (player.hasPermission(CWPermission.BYPASS.permission())) return;
+
         List<String> filtered = CommandFilter.filterTabCompletion(plugin.getConfigCache().get(), player::hasPermission, event.getBuffer(), event.getCompletions(), plugin.aliases);
+
         if (filtered == null) {
             plugin.getConfigCache().debug("Actively prevented " + player.getName() + "'s tab completion (sus packet)");
             event.setCancelled(true);
             return;
         }
+
         event.setCompletions(filtered);
     }
 }

@@ -26,6 +26,7 @@ public final class PaperFeatures implements Listener {
     public static void enable(CommandWhitelistBukkit plugin) {
         plugin.getServer().getPluginManager().registerEvents(new PaperFeatures(plugin), plugin);
         plugin.setExtraAliases(new RedirectAliases(plugin.getServer()));
+
         try {
             Class.forName("com.destroystokyo.paper.event.brigadier.AsyncPlayerSendCommandsEvent");
             plugin.getServer().getPluginManager().registerEvents(new CommandTreeListener(plugin), plugin);
@@ -38,14 +39,19 @@ public final class PaperFeatures implements Listener {
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onCommandTabComplete(AsyncTabCompleteEvent event) {
         if (!(event.getSender() instanceof Player)) return;
+
         Player player = (Player) event.getSender();
+
         if (player.hasPermission(CWPermission.BYPASS.permission())) return;
+
         List<String> filtered = CommandFilter.filterTabCompletion(plugin.getConfigCache().get(), player::hasPermission, event.getBuffer(), event.getCompletions(), plugin.aliases);
+
         if (filtered == null) {
             plugin.getConfigCache().debug("Actively prevented " + player.getName() + "'s tab completion (sus packet)");
             event.setCancelled(true);
             return;
         }
+
         if (!event.getCompletions().isEmpty()) event.setCompletions(filtered);
     }
 }

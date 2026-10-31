@@ -29,11 +29,16 @@ public final class CommandTreeListener implements Listener {
     public void onSendCommands(AsyncPlayerSendCommandsEvent event) {
         // the event runs a second time on the main thread only if it did not run asynchronously
         if (!event.isAsynchronous() && event.hasFiredAsync()) return;
+
         Player player = event.getPlayer();
+
         if (player.hasPermission(CWPermission.BYPASS.permission())) return;
+
         Settings settings = plugin.getConfigCache().get();
         Settings.Rules rules = settings.rulesFor(player::hasPermission);
+
         if (rules.subCommands.isEmpty()) return;
+
         for (Object root : event.getCommandNode().getChildren())
             prune((CommandNode) root, ((CommandNode) root).getName(), settings, rules);
     }
@@ -43,6 +48,7 @@ public final class CommandTreeListener implements Listener {
         java.util.Collection<CommandNode> children = node.getChildren();
         children.removeIf(child -> child instanceof LiteralCommandNode
                 && !CommandFilter.isBranchVisible(settings, rules, path + " " + child.getName(), plugin.aliases));
+
         for (CommandNode child : children) {
             if (child instanceof LiteralCommandNode)
                 prune(child, path + " " + child.getName(), settings, rules);

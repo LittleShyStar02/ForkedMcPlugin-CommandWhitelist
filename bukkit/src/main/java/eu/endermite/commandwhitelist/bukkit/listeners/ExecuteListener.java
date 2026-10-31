@@ -33,10 +33,14 @@ public class ExecuteListener implements Listener {
 
     private void check(PlayerCommandPreprocessEvent event) {
         Player player = event.getPlayer();
+
         if (player.hasPermission(CWPermission.BYPASS.permission())) return;
+
         Settings settings = plugin.getConfigCache().get();
         CommandFilter.Verdict verdict = CommandFilter.evaluate(settings, player::hasPermission, event.getMessage(), plugin.aliases);
+
         if (verdict == CommandFilter.Verdict.ALLOWED) return;
+
         event.setCancelled(true);
         CommandFilter.notifyDenied(settings, plugin.messenger(player), player::hasPermission, verdict, event.getMessage());
     }

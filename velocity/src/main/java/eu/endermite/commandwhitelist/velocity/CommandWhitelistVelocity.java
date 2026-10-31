@@ -74,7 +74,9 @@ public class CommandWhitelistVelocity implements CWCommand.Platform {
                 logger.warn(message);
             }
         });
+
         server.getCommandManager().register(server.getCommandManager().metaBuilder("vcw").plugin(this).build(), new MainCommand());
+
         Metrics metrics = metricsFactory.make(this, 8704);
         metrics.addCustomChart(new SimplePie("proxy", () -> "Velocity"));
     }
@@ -83,21 +85,30 @@ public class CommandWhitelistVelocity implements CWCommand.Platform {
     @SuppressWarnings("UnstableApiUsage")
     public void onUserCommandSendEvent(PlayerAvailableCommandsEvent event) {
         Player player = event.getPlayer();
+
         if (player.hasPermission(CWPermission.BYPASS.permission())) return;
+
         Settings settings = configCache.get();
+
         event.getRootNode().getChildren().removeIf(commandNode ->
                 server.getCommandManager().hasCommand(commandNode.getName())
                         && !CommandFilter.isVisible(settings, player::hasPermission, commandNode.getName(), CommandFilter.AliasResolver.NONE));
+
         // the client suggests literal branches of a command by itself, so the subcommands have to leave the tree too
         Settings.Rules rules = settings.rulesFor(player::hasPermission);
+
         if (rules.subCommands.isEmpty()) return;
+
         for (CommandNode<?> root : event.getRootNode().getChildren()) {
             boolean listed = settings.debug && rules.subCommands.stream()
                     .anyMatch(entry -> CommandUtil.getCommandLabel(entry).equalsIgnoreCase(CommandUtil.stripNamespace(root.getName())));
+
             if (listed) logger.info("Command tree of " + player.getUsername() + ": /" + root.getName()
                     + " redirect=" + (root.getRedirect() != null) + " before=" + describe(root));
+
             pruneSubcommands(root, root.getName(), settings, rules);
             listedSubcommandsOnly(root, settings, rules);
+
             if (listed) logger.info("Command tree of " + player.getUsername() + ": /" + root.getName() + " after=" + describe(root));
         }
     }
@@ -110,32 +121,46 @@ public class CommandWhitelistVelocity implements CWCommand.Platform {
     @SuppressWarnings("unchecked")
     private void listedSubcommandsOnly(CommandNode<?> root, Settings settings, Settings.Rules rules) {
         if (settings.subcommandsMode != ListMode.WHITELIST || settings.matchType != MatchType.LITERAL) return;
+
         CommandNode<CommandSource> node = (CommandNode<CommandSource>) root;
         List<List<String>> entries = new ArrayList<>();
+
         for (String listed : rules.subCommands) {
             List<String> words = CommandUtil.tokenize(listed);
+
             if (words.size() > 1 && words.get(0).equalsIgnoreCase(CommandUtil.stripNamespace(root.getName())))
                 entries.add(words);
         }
+
         if (entries.isEmpty()) return;
+
         List<CommandNode<CommandSource>> arguments = new ArrayList<>();
+
         for (CommandNode<CommandSource> child : node.getChildren()) {
             // a command that already has literal branches is handled by pruning them
             if (child instanceof LiteralCommandNode) return;
+
             arguments.add(child);
         }
+
         if (arguments.isEmpty()) return;
+
         node.getChildren().removeIf(child -> !(child instanceof LiteralCommandNode));
+
         for (List<String> words : entries) {
             CommandNode<CommandSource> parent = node;
+
             for (String word : words.subList(1, words.size())) {
                 CommandNode<CommandSource> next = parent.getChild(word);
+
                 if (next == null) {
                     next = LiteralArgumentBuilder.<CommandSource>literal(word).executes(context -> 0).build();
                     parent.addChild(next);
                 }
+
                 parent = next;
             }
+
             if (parent.getChildren().isEmpty()) {
                 for (CommandNode<CommandSource> argument : arguments) parent.addChild(argument);
             }
@@ -146,12 +171,14 @@ public class CommandWhitelistVelocity implements CWCommand.Platform {
         StringBuilder out = new StringBuilder("[");
         for (CommandNode<?> child : node.getChildren())
             out.append(child.getName()).append(':').append(child.getClass().getSimpleName()).append(' ');
+
         return out.append(']').toString();
     }
 
     private void pruneSubcommands(CommandNode<?> node, String path, Settings settings, Settings.Rules rules) {
         node.getChildren().removeIf(child -> child instanceof LiteralCommandNode
                 && !CommandFilter.isBranchVisible(settings, rules, path + " " + child.getName(), CommandFilter.AliasResolver.NONE));
+
         for (CommandNode<?> child : node.getChildren()) {
             if (child instanceof LiteralCommandNode)
                 pruneSubcommands(child, path + " " + child.getName(), settings, rules);
@@ -161,7 +188,9 @@ public class CommandWhitelistVelocity implements CWCommand.Platform {
     @Subscribe
     public void onUserCommandExecuteEvent(CommandExecuteEvent event) {
         if (!(event.getCommandSource() instanceof Player)) return;
+
         Player player = (Player) event.getCommandSource();
+
         if (player.hasPermission(CWPermission.BYPASS.permission())) return;
 
         // Workaround for velocity executing "/ command" as valid command
@@ -190,9 +219,12 @@ public class CommandWhitelistVelocity implements CWCommand.Platform {
     @Subscribe
     public void onUserTabCompleteEvent(TabCompleteEvent event) {
         Player player = event.getPlayer();
+
         if (player.hasPermission(CWPermission.BYPASS.permission())) return;
         if (event.getSuggestions().isEmpty()) return;
+
         Settings settings = configCache.get();
+
         List<String> newSuggestions = CommandUtil.filterSuggestions(
                 event.getPartialMessage(),
                 event.getSuggestions(),
@@ -200,6 +232,7 @@ public class CommandWhitelistVelocity implements CWCommand.Platform {
                 settings.subcommandsMode,
                 settings.matchType
         );
+
         event.getSuggestions().clear();
         event.getSuggestions().addAll(newSuggestions);
     }
@@ -258,6 +291,7 @@ public class CommandWhitelistVelocity implements CWCommand.Platform {
             List<TagResolver> resolvers = new ArrayList<>();
             for (Map.Entry<String, String> placeholder : placeholders.entrySet())
                 resolvers.add(Placeholder.unparsed(placeholder.getKey(), placeholder.getValue()));
+
             return MiniMessage.miniMessage().deserialize(miniMessage, TagResolver.resolver(resolvers));
         }
 

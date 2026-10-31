@@ -95,6 +95,7 @@ public class CommandWhitelistBukkit extends JavaPlugin implements CWCommand.Plat
         } catch (ClassNotFoundException e) {
             return new PlayerScheduler.Standard(this);
         }
+
         try {
             return (PlayerScheduler) Class.forName("eu.endermite.commandwhitelist.folia.FoliaPlayerScheduler")
                     .getConstructor(org.bukkit.plugin.Plugin.class).newInstance(this);
@@ -112,6 +113,7 @@ public class CommandWhitelistBukkit extends JavaPlugin implements CWCommand.Plat
         } catch (ClassNotFoundException e) {
             return;
         }
+
         try {
             Class.forName("eu.endermite.commandwhitelist.paper.PaperFeatures")
                     .getMethod("enable", CommandWhitelistBukkit.class).invoke(null, this);
@@ -124,7 +126,9 @@ public class CommandWhitelistBukkit extends JavaPlugin implements CWCommand.Plat
     private void readCommandMap() {
         try {
             commandMap = (CommandMap) getServer().getClass().getMethod("getCommandMap").invoke(getServer());
+
             Class<?> type = commandMap.getClass();
+
             while (type != null && knownCommands == null) {
                 try {
                     Field field = type.getDeclaredField("knownCommands");
@@ -149,12 +153,15 @@ public class CommandWhitelistBukkit extends JavaPlugin implements CWCommand.Plat
     private Collection<String> otherNames(String label) {
         Set<String> names = new LinkedHashSet<>(extraAliases.apply(label));
         Map<String, Command> known = knownCommands;
+
         if (known != null) {
             String lowerLabel = label.toLowerCase(Locale.ROOT);
             addNames(names, known.get(lowerLabel));
             addNames(names, commandsByAlias(known).get(lowerLabel));
         }
+
         names.remove(label);
+
         return names;
     }
 
@@ -171,13 +178,18 @@ public class CommandWhitelistBukkit extends JavaPlugin implements CWCommand.Plat
     private Map<String, Command> commandsByAlias(Map<String, Command> known) {
         AliasIndex index = aliasIndex;
         int size = known.size();
+
         if (index != null && index.size == size) return index.commands;
+
         Map<String, Command> commands = new HashMap<>();
+
         for (Command command : new ArrayList<>(known.values())) {
             for (String alias : command.getAliases())
                 commands.putIfAbsent(alias.toLowerCase(Locale.ROOT), command);
         }
+
         aliasIndex = new AliasIndex(size, commands);
+
         return commands;
     }
 
@@ -212,9 +224,11 @@ public class CommandWhitelistBukkit extends JavaPlugin implements CWCommand.Plat
     public void reload(Consumer<Boolean> whenDone) {
         scheduler.async(() -> {
             boolean success = configCache.reloadConfig();
+
             for (Player player : new ArrayList<>(getServer().getOnlinePlayers())) {
                 scheduler.onPlayerThread(player, player::updateCommands);
             }
+
             whenDone.accept(success);
         });
     }
@@ -223,11 +237,15 @@ public class CommandWhitelistBukkit extends JavaPlugin implements CWCommand.Plat
     public Collection<String> serverCommands() {
         if (knownCommands != null) return new ArrayList<>(knownCommands.keySet());
         Set<String> commands = new LinkedHashSet<>();
+
         for (HelpTopic topic : getServer().getHelpMap().getHelpTopics()) {
             String name = topic.getName();
+
             if (Character.isUpperCase(name.charAt(0))) continue;
+
             commands.add(name);
         }
+
         return commands;
     }
 

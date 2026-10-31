@@ -37,6 +37,7 @@ final class RedirectAliases implements Function<String, Collection<String>> {
             current = read();
             table = current;
         }
+
         Set<String> names = current.get(label.toLowerCase(Locale.ROOT));
         return names == null ? Collections.<String>emptyList() : names;
     }
@@ -45,6 +46,7 @@ final class RedirectAliases implements Function<String, Collection<String>> {
         try {
             Object minecraftServer = server.getClass().getMethod("getServer").invoke(server);
             Object commands = commandsOf(minecraftServer);
+
             for (Method method : commands.getClass().getMethods()) {
                 if (method.getParameterCount() == 0 && CommandDispatcher.class.isAssignableFrom(method.getReturnType())) {
                     CommandDispatcher<?> dispatcher = (CommandDispatcher<?>) method.invoke(commands);
@@ -74,7 +76,9 @@ final class RedirectAliases implements Function<String, Collection<String>> {
             CommandNode<?> target = node.getRedirect() != null ? node.getRedirect() : node;
             byTarget.computeIfAbsent(target, key -> new ArrayList<>()).add(node.getName());
         }
+
         Map<String, Set<String>> table = new HashMap<>();
+
         for (List<String> names : byTarget.values()) {
             if (names.size() < 2) continue;
             for (String name : names) {

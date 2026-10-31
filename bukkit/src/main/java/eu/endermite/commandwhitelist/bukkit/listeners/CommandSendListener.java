@@ -21,7 +21,9 @@ public class CommandSendListener implements Listener {
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onCommandSend(PlayerCommandSendEvent event) {
         Player player = event.getPlayer();
+
         if (player.hasPermission(CWPermission.BYPASS.permission())) return;
+
         Settings settings = plugin.getConfigCache().get();
         event.getCommands().removeIf(name -> !CommandFilter.isVisible(settings, player::hasPermission, name, plugin.aliases));
     }
